@@ -1,0 +1,93 @@
+service: burger-king-catalogo
+
+provider:
+  name: aws
+  runtime: python3.13
+  region: us-east-1
+  memorySize: 256
+  timeout: 20
+  iam:
+    role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
+  environment:
+    TABLA_PRODUCTOS: Burger-Productos-${sls:stage, 'dev'}
+    BUCKET_PRODUCTOS: ${env:S3_BUCKET_NAME, 'burger-king-productos-bucket'}
+  httpApi:
+    cors: true
+    authorizers:
+      MiAutorizadorBurger:
+        type: request
+        functionArn: arn:aws:lambda:${aws:region}:${aws:accountId}:function:burger-king-autenticacion-${sls:stage}-ValidarTokenAcceso
+
+layers:
+  DependenciasLayer:
+    arn: !ImportValue BurgerKing-Python-Layer-Version
+
+functions:
+  CreateProduct:
+    handler: handlers/product_create.lambda_handler
+    layers:
+      - { Ref: DependenciasLayer }
+    events:
+      - httpApi:
+          method: POST
+          path: /productos/create
+          authorizer:
+            name: MiAutorizadorBurger
+
+  UpdateProduct: 
+    handler: handlers/product_update.lambda_handler
+    layers:
+      - { Ref: DependenciasLayer }
+    events:
+      - httpApi:
+          method: PUT
+          path: /productos/update
+          authorizer:
+            name: MiAutorizadorBurger
+
+  DeleteProduct:
+    handler: handlers/product_delete.lambda_handler
+    layers:
+      - { Ref: DependenciasLayer }
+    events:
+      - httpApi:
+          method: DELETE
+          path: /productos/delete
+          authorizer:
+            name: MiAutorizadorBurger
+
+  ProductID:
+    handler: handlers/product_id.lambda_handler
+    layers:
+      - { Ref: DependenciasLayer }
+    events:
+      - httpApi:
+          method: POST 
+          path: /productos/id
+
+  ListProduct:
+    handler: handlers/product_list.lambda_handler
+    layers:
+      - { Ref: DependenciasLayer }
+    events:
+      - httpApi:
+          method: POST
+          path: /productos/list
+
+resources:
+  Resources:
+    ProductosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Burger-Productos-${sls:stage, 'dev'}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: local_id
+            AttributeType: S
+          - AttributeName: producto_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: local_id
+            KeyType: HASH
+          - AttributeName: producto_id
+            KeyType: RANGE

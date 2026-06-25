@@ -1,0 +1,101 @@
+service: burger-king-step-function
+
+provider:
+  name: aws
+  runtime: python3.13
+  region: us-east-1
+  memorySize: 256
+  timeout: 30
+  iam:
+    role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
+  environment:
+    STATE_MACHINE_ARN: arn:aws:states:us-east-1:${env:AWS_ACCOUNT_ID}:stateMachine:BurgerKingStateMachine
+    TABLE_HISTORIAL_ESTADOS: ${env:TABLE_HISTORIAL_ESTADOS}
+    TABLE_PRODUCTOS: ${env:TABLE_PRODUCTOS}
+    TABLE_PEDIDOS: ${env:TABLE_PEDIDOS}
+    EVENT_BUS_NAME: default
+
+functions:
+  procesarPedido:
+    handler: handlers/procesar_pedido.handler
+  pedidoEnCocina:
+    handler: handlers/pedido_en_cocina.handler
+  cocinaCompleta:
+    handler: handlers/cocina_completa.handler
+  reintentarCocina:
+    handler: handlers/reintentar_cocina.handler
+  empaquetado:
+    handler: handlers/empaquetado.handler
+  delivery:
+    handler: handlers/delivery.handler
+  reintentarDelivery:
+    handler: handlers/reintentar_delivery.handler
+  entregado:
+    handler: handlers/entregado.handler
+  entregaCompleta:
+    handler: handlers/entrega_completa.handler
+  pedidoFallido:
+    handler: handlers/pedido_fallido.handler
+
+  startExecution:
+    handler: handlers/start_execution.handler
+    events:
+      - eventBridge:
+          pattern:
+            source:
+              - "burgerking.pedidos"
+            detail-type:
+              - "CrearPedido"
+
+  cambiarEstado:
+    handler: handlers/cambiar_estado.handler
+    events:
+      - eventBridge:
+          pattern:
+            source:
+              - "burgerking.cocina"
+              - "burgerking.empaque"
+              - "burgerking.delivery"
+              - "burgerking.cliente"
+            detail-type:
+              - "EnPreparacion"
+              - "CocinaCompleta"
+              - "Empaquetado"
+              - "PedidoEnCamino"
+              - "EntregaDelivery"
+              - "ConfirmarPedidoCliente"
+
+  triggerEvent:
+    handler: handlers/trigger_event.handler
+    events:
+      - httpApi:
+          path: /eventos/trigger
+          method: POST
+
+resources:
+  Outputs:
+    ProcesarPedidoArn:
+      Value: !GetAtt ProcesarPedidoLambdaFunction.Arn
+    PedidoEnCocinaArn:
+      Value: !GetAtt PedidoEnCocinaLambdaFunction.Arn
+    CocinaCompletaArn:
+      Value: !GetAtt CocinaCompletaLambdaFunction.Arn
+    ReintentarCocinaArn:
+      Value: !GetAtt ReintentarCocinaLambdaFunction.Arn
+    EmpaquetadoArn:
+      Value: !GetAtt EmpaquetadoLambdaFunction.Arn
+    DeliveryArn:
+      Value: !GetAtt DeliveryLambdaFunction.Arn
+    ReintentarDeliveryArn:
+      Value: !GetAtt ReintentarDeliveryLambdaFunction.Arn
+    EntregadoArn:
+      Value: !GetAtt EntregadoLambdaFunction.Arn
+    EntregaCompletaArn:
+      Value: !GetAtt EntregaCompletaLambdaFunction.Arn
+    PedidoFallidoArn:
+      Value: !GetAtt PedidoFallidoLambdaFunction.Arn
+
+package:
+  patterns:
+    - '!**/*'
+    - 'handlers/**/*.py'

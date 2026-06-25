@@ -1,0 +1,38 @@
+org: ${env:ORG_NAME}
+app: burger-king-backend
+stage: dev
+
+services:
+  dependencias:
+    path: dependencias
+
+  api-autenticacion:
+    path: autenticacion
+    dependsOn:
+      - dependencias
+
+  api-catalogo:
+    path: catalogo
+    dependsOn:
+      - dependencias
+
+  step-function:
+    path: stepFunction
+    dependsOn:
+      - dependencias
+
+  api-pedidos:
+    path: pedidos
+    dependsOn:
+      - dependencias
+      - step-function
+
+  api-operaciones:
+    path: operaciones
+    dependsOn:
+      - dependencias
+
+  api-analitica:
+    path: analitica
+    dependsOn:
+      - dependencias
