@@ -9,24 +9,20 @@ provider:
   iam:
     role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
   environment:
-    TABLA_PRODUCTOS: Burger-Productos-${sls:stage, 'dev'}
-    BUCKET_PRODUCTOS: ${env:S3_BUCKET_NAME, 'burger-king-productos-bucket'}
+    TABLA_PRODUCTOS: ${env:TABLA_PRODUCTOS}
+    BUCKET_PRODUCTOS: ${env:S3_BUCKET_NAME}
   httpApi:
     cors: true
     authorizers:
       MiAutorizadorBurger:
         type: request
-        functionArn: arn:aws:lambda:${aws:region}:${aws:accountId}:function:burger-king-autenticacion-${sls:stage}-ValidarTokenAcceso
-
-layers:
-  DependenciasLayer:
-    arn: !ImportValue BurgerKing-Python-Layer-Version
+        functionArn: arn:aws:lambda:${aws:region}:${aws:accountId}:function:burger-king-autenticacion-dev-ValidarTokenAcceso
 
 functions:
   CreateProduct:
     handler: handlers/product_create.lambda_handler
     layers:
-      - { Ref: DependenciasLayer }
+      - !ImportValue BurgerKing-Python-Layer-Version
     events:
       - httpApi:
           method: POST
@@ -37,7 +33,7 @@ functions:
   UpdateProduct: 
     handler: handlers/product_update.lambda_handler
     layers:
-      - { Ref: DependenciasLayer }
+      - !ImportValue BurgerKing-Python-Layer-Version
     events:
       - httpApi:
           method: PUT
@@ -48,7 +44,7 @@ functions:
   DeleteProduct:
     handler: handlers/product_delete.lambda_handler
     layers:
-      - { Ref: DependenciasLayer }
+      - !ImportValue BurgerKing-Python-Layer-Version
     events:
       - httpApi:
           method: DELETE
@@ -59,7 +55,7 @@ functions:
   ProductID:
     handler: handlers/product_id.lambda_handler
     layers:
-      - { Ref: DependenciasLayer }
+      - !ImportValue BurgerKing-Python-Layer-Version
     events:
       - httpApi:
           method: POST 
@@ -68,7 +64,7 @@ functions:
   ListProduct:
     handler: handlers/product_list.lambda_handler
     layers:
-      - { Ref: DependenciasLayer }
+      - !ImportValue BurgerKing-Python-Layer-Version
     events:
       - httpApi:
           method: POST
@@ -79,7 +75,7 @@ resources:
     ProductosTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: Burger-Productos-${sls:stage, 'dev'}
+        TableName: ${env:TABLA_PRODUCTOS}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: local_id

@@ -5,25 +5,24 @@ provider:
   runtime: python3.13
   region: us-east-1
   memorySize: 256
-  timeout: 20
+  timeout: 10
   iam:
     role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
   environment:
-    TABLA_USUARIOS: Burger-Usuarios-${sls:stage, 'dev'}
-    TABLA_EMPLEADOS: Burger-Empleados-${sls:stage, 'dev'}
-    TABLA_TOKENS: Burger-Tokens-Usuarios-${sls:stage, 'dev'}
+    TABLA_USUARIOS: ${env:TABLA_USUARIOS}
+    TABLA_EMPLEADOS: ${env:TABLA_EMPLEADOS}
+    TABLA_TOKENS: ${env:TABLA_TOKENS}
+    JWT_SECRET: ${env:JWT_SECRET}
   httpApi:
     cors: true
 
-layers:
-  DependenciasLayer:
-    arn: !ImportValue BurgerKing-Python-Layer-Version
+# ¡Bloque global 'layers' eliminado para evitar el error de 'path'!
 
 functions:
   crearUsuario:
     handler: handlers/crear_usuario.lambda_handler
     layers:
-      - { Ref: DependenciasLayer }
+      - !ImportValue BurgerKing-Python-Layer-Version  # Importación directa
     events:
       - httpApi:
           method: POST
@@ -32,24 +31,23 @@ functions:
   loginUsuario:
     handler: handlers/login_usuario.lambda_handler
     layers:
-      - { Ref: DependenciasLayer }
+      - !ImportValue BurgerKing-Python-Layer-Version  # Importación directa
     events:
       - httpApi:
           method: POST
           path: /auth/login
 
-  validarToken:
-    name: ValidarTokenAcceso
+  ValidarTokenAcceso:
     handler: handlers/validar_token.lambda_handler
     layers:
-      - { Ref: DependenciasLayer }
+      - !ImportValue BurgerKing-Python-Layer-Version  # Importación directa
 
 resources:
   Resources:
     UsuariosTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: Burger-Usuarios-${sls:stage, 'dev'}
+        TableName: ${env:TABLA_USUARIOS}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: usuario_id
@@ -57,11 +55,11 @@ resources:
         KeySchema:
           - AttributeName: usuario_id
             KeyType: HASH
-
+            
     EmpleadosTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: Burger-Empleados-${sls:stage, 'dev'}
+        TableName: ${env:TABLA_EMPLEADOS}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: empleado_id
@@ -73,7 +71,7 @@ resources:
     TokensTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: Burger-Tokens-Usuarios-${sls:stage, 'dev'}
+        TableName: ${env:TABLA_TOKENS}
         BillingMode: PAY_PER_REQUEST
         AttributeDefinitions:
           - AttributeName: token_id
