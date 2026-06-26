@@ -15,24 +15,29 @@ services:
     path: catalogo
     dependsOn:
       - dependencias
+      - api-autenticacion
 
-  step-function:
-    path: stepFunction
-    dependsOn:
-      - dependencias
+  # =========================================================================
+  # MÓDULOS EN DESARROLLO
+  # (Se comentan temporalmente para que el comando global no falle por falta de archivos)
+  # =========================================================================
+  # step-function:
+  #   path: stepFunction
+  #   dependsOn:
+  #     - dependencias
 
-  api-pedidos:
-    path: pedidos
-    dependsOn:
-      - dependencias
-      - step-function
+  # api-pedidos:
+  #   path: pedidos
+  #   dependsOn:
+  #     - dependencias
+  #     - step-function
 
-  api-operaciones:
-    path: operaciones
-    dependsOn:
-      - dependencias
+  # api-operaciones:
+  #   path: operaciones
+  #   dependsOn:
+  #     - dependencias
 
-  api-analitica:
-    path: analitica
-    dependsOn:
-      - dependencias
+  # api-analitica:
+  #   path: analitica
+  #   dependsOn:
+  #     - dependencias
