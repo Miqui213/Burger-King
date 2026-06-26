@@ -10,35 +10,68 @@ provider:
     role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
   environment:
     STATE_MACHINE_ARN: arn:aws:states:us-east-1:${env:AWS_ACCOUNT_ID}:stateMachine:BurgerKingStateMachine
-    TABLE_HISTORIAL_ESTADOS: ${env:TABLE_HISTORIAL_ESTADOS}
-    TABLE_PRODUCTOS: ${env:TABLE_PRODUCTOS}
-    TABLE_PEDIDOS: ${env:TABLE_PEDIDOS}
+    TABLE_HISTORIAL_ESTADOS: ${env:TABLA_HISTORIAL_ESTADOS}
+    TABLE_PRODUCTOS: ${env:TABLA_PRODUCTOS}
+    TABLE_PEDIDOS: ${env:TABLA_PEDIDOS}
     EVENT_BUS_NAME: default
+  httpApi:
+    cors: true
 
 functions:
   procesarPedido:
     handler: handlers/procesar_pedido.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+      
   pedidoEnCocina:
     handler: handlers/pedido_en_cocina.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+      
   cocinaCompleta:
     handler: handlers/cocina_completa.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+      
   reintentarCocina:
     handler: handlers/reintentar_cocina.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+      
   empaquetado:
     handler: handlers/empaquetado.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+      
   delivery:
     handler: handlers/delivery.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+      
   reintentarDelivery:
     handler: handlers/reintentar_delivery.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+      
   entregado:
     handler: handlers/entregado.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+      
   entregaCompleta:
     handler: handlers/entrega_completa.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+      
   pedidoFallido:
     handler: handlers/pedido_fallido.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
 
   startExecution:
     handler: handlers/start_execution.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
     events:
       - eventBridge:
           pattern:
@@ -49,6 +82,8 @@ functions:
 
   cambiarEstado:
     handler: handlers/cambiar_estado.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
     events:
       - eventBridge:
           pattern:
@@ -67,6 +102,8 @@ functions:
 
   triggerEvent:
     handler: handlers/trigger_event.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
     events:
       - httpApi:
           path: /eventos/trigger
@@ -99,3 +136,4 @@ package:
   patterns:
     - '!**/*'
     - 'handlers/**/*.py'
+    - 'step_function_definition.json'
