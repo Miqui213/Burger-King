@@ -23,8 +23,8 @@ services:
   # =========================================================================
   step-function:
     path: stepFunction
-     dependsOn:
-      - dependencias
+      dependsOn:
+       - dependencias
 
   # api-pedidos:
   #   path: pedidos
