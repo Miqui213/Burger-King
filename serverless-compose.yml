@@ -21,10 +21,10 @@ services:
   # MÓDULOS EN DESARROLLO
   # (Se comentan temporalmente para que el comando global no falle por falta de archivos)
   # =========================================================================
-  # step-function:
-  #   path: stepFunction
-  #   dependsOn:
-  #     - dependencias
+  step-function:
+    path: stepFunction
+     dependsOn:
+      - dependencias
 
   # api-pedidos:
   #   path: pedidos

@@ -1,55 +1,39 @@
 import json
-import os
 import boto3
-from datetime import datetime
+import os
 
-events = boto3.client('events')
-EVENT_BUS_NAME = os.environ.get('EVENT_BUS_NAME', 'default')
+eventbridge = boto3.client('events')
 
 def handler(event, context):
-    print(f"TriggerEvent INVOKED: {json.dumps(event)}")
-    
     try:
-        body = json.loads(event.get('body', '{}'))
-    except:
-        body = {}
+        body_str = event.get('body', '{}')
+        body = json.loads(body_str) if body_str else {}
         
-    event_type = body.get('type')
-    source = body.get('source', 'burgerking.api')
-    detail = body.get('detail', {})
-    
-    if not event_type:
-        print("Error: Falta el campo 'type' en el body")
-        return {
-            "statusCode": 400, 
-            "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"error": "Missing 'type'"})
-        }
+        source = 'burgerking.pedidos'
+        detail_type = 'CrearPedido'
         
-    detail['at'] = datetime.utcnow().isoformat()
-    
-    try:
-        response = events.put_events(
+        respuesta = eventbridge.put_events(
             Entries=[
                 {
                     'Source': source,
-                    'DetailType': event_type,
-                    'Detail': json.dumps(detail),
-                    'EventBusName': EVENT_BUS_NAME
+                    'DetailType': detail_type,
+                    'Detail': json.dumps(body),
+                    'EventBusName': 'default'
                 }
             ]
         )
-        print(f"Evento publicado exitosamente: {event_type} desde {source}")
+        
         return {
             "statusCode": 200,
             "headers": {"Content-Type": "application/json"},
             "body": json.dumps({
-                "message": "Event published",
-                "response": response
+                "mensaje": "¡AWS recibió el pedido de Oracle y encendió la Step Function!",
+                "eventBridge": respuesta
             })
         }
+        
     except Exception as e:
-        print(f"Error al publicar evento en EventBridge: {e}")
+        print(f"Error crítico en Lambda: {e}")
         return {
             "statusCode": 500,
             "headers": {"Content-Type": "application/json"},
