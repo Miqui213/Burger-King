@@ -9,7 +9,7 @@ provider:
   iam:
     role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
   environment:
-    TABLA_HISTORIAL: Burger-Historial-Estados-${self:provider.stage}
+    TABLA_HISTORIAL_ESTADOS: ${env:TABLA_HISTORIAL_ESTADOS}
     BUCKET_INGESTA: ${env:S3_BUCKET_NAME}
     ATHENA_DATABASE: burger_analytics_db
   httpApi:

@@ -8,7 +8,7 @@ from datetime import datetime
 dynamodb = boto3.resource('dynamodb')
 s3 = boto3.client('s3')
 
-tabla_historial = dynamodb.Table(os.environ.get('TABLA_HISTORIAL'))
+tabla_historial = dynamodb.Table(os.environ.get('TABLA_HISTORIAL_ESTADOS'))
 bucket_ingesta = os.environ.get('BUCKET_INGESTA')
 
 def lambda_handler(event, context):
