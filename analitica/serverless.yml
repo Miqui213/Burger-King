@@ -10,7 +10,7 @@ provider:
     role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
   environment:
     TABLA_HISTORIAL_ESTADOS: ${env:TABLA_HISTORIAL_ESTADOS}
-    BUCKET_INGESTA: ${env:S3_BUCKET_NAME}
+    BUCKET_INGESTA: ${env:S3_BUCKET_INGESTA}
     ATHENA_DATABASE: burger_analytics_db
   httpApi:
     cors: true
