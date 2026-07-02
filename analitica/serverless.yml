@@ -1,0 +1,43 @@
+service: burger-king-analitica
+
+provider:
+  name: aws
+  runtime: python3.13
+  region: us-east-1
+  memorySize: 256
+  timeout: 30
+  iam:
+    role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
+  environment:
+    TABLA_HISTORIAL: Burger-Historial-Estados-${self:provider.stage}
+    BUCKET_INGESTA: ${env:S3_BUCKET_NAME}
+    ATHENA_DATABASE: burger_analytics_db
+  httpApi:
+    cors: true
+    authorizers:
+      MiAutorizadorBurger:
+        type: request
+        functionArn: arn:aws:lambda:${aws:region}:${aws:accountId}:function:burger-king-autenticacion-dev-ValidarTokenAcceso
+
+functions:
+  IngestaDatos:
+    handler: handlers/ingesta.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: POST
+          path: /analitica/ingesta
+          authorizer:
+            name: MiAutorizadorBurger
+
+  ObtenerMetricas:
+    handler: handlers/metricas.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: GET
+          path: /analitica/dashboard
+          authorizer:
+            name: MiAutorizadorBurger

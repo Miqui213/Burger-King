@@ -1,0 +1,52 @@
+service: burger-king-operaciones
+
+provider:
+  name: aws
+  runtime: python3.13
+  region: us-east-1
+  memorySize: 256
+  timeout: 20
+  iam:
+    role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
+  environment:
+    TABLA_PEDIDOS: ${env:TABLA_PEDIDOS}
+  httpApi:
+    cors: true
+    authorizers:
+      MiAutorizadorBurger:
+        type: request
+        functionArn: arn:aws:lambda:${aws:region}:${aws:accountId}:function:burger-king-autenticacion-dev-ValidarTokenAcceso
+
+functions:
+  CompletarCocina:
+    handler: handlers/cocina.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: POST
+          path: /operaciones/cocina
+          authorizer:
+            name: MiAutorizadorBurger
+
+  CompletarEmpaquetado:
+    handler: handlers/empaquetado.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: POST
+          path: /operaciones/empaque
+          authorizer:
+            name: MiAutorizadorBurger
+
+  DespacharDelivery:
+    handler: handlers/delivery.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: POST
+          path: /operaciones/delivery
+          authorizer:
+            name: MiAutorizadorBurger

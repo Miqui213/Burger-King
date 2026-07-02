@@ -3,6 +3,7 @@ import os
 import boto3
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb')
 TABLE_HISTORIAL_ESTADOS = os.environ['TABLE_HISTORIAL_ESTADOS']
@@ -32,16 +33,15 @@ def handler(event, context):
     task_token = event.get('taskToken')
     input_data = event.get('input', {})
 
-    order_id = (
-        input_data.get('detail', {}).get('order_id') or 
-        input_data.get('order_id') or 
-        input_data.get('pedido_id') or 
-        str(uuid.uuid4())
-    )
+    pedido_id = event.get('pedido_id') or event.get('detail', {}).get('pedido_id')
+    
+    if not pedido_id:
+        return {"statusCode": 400, "body": "Error: pedido_id no encontrado"}
+        
     empleado_id = input_data.get('detail', {}).get('empleado_id') or input_data.get('empleado_id', 'SYSTEM')
     local_id = input_data.get('local_id', 'UNKNOWN')
-    
-    update_pedido_estado(order_id, local_id, 'procesando')
+
+    update_pedido_estado(pedido_id, local_id, 'procesando')
     
     table = dynamodb.Table(TABLE_HISTORIAL_ESTADOS)
     timestamp = datetime.utcnow().isoformat()
@@ -49,9 +49,12 @@ def handler(event, context):
     details_with_local = dict(input_data)
     if 'local_id' not in details_with_local:
         details_with_local['local_id'] = local_id
+        
+    total_pedido = Decimal(str(event.get('total', 0)))
     
     item = {
-        'pedido_id': order_id,
+        'pedido_id': pedido_id,
+        'total': total_pedido,
         'estado_id': timestamp,
         'createdAt': timestamp,
         'estado': 'procesando',
@@ -60,10 +63,11 @@ def handler(event, context):
         'empleado': empleado_id,
         'details': details_with_local
     }
+    
     table.put_item(Item=item)
     
     return {
         "status": "EN_COCINA",
-        "order_id": order_id,
+        "order_id": pedido_id,
         "empleado_id": empleado_id
     }

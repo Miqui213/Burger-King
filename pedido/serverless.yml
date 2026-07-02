@@ -1,0 +1,56 @@
+service: burger-king-pedidos
+
+provider:
+  name: aws
+  runtime: python3.13
+  region: us-east-1
+  memorySize: 256
+  timeout: 20
+  iam:
+    role: arn:aws:iam::${env:AWS_ACCOUNT_ID}:role/LabRole
+  environment:
+    TABLA_PEDIDOS: ${env:TABLA_PEDIDOS}
+    EVENT_BUS_NAME: default
+  httpApi:
+    cors: true
+    authorizers:
+      MiAutorizadorBurger:
+        type: request
+        functionArn: arn:aws:lambda:${aws:region}:${aws:accountId}:function:burger-king-autenticacion-dev-ValidarTokenAcceso
+
+functions:
+  CrearPedido:
+    handler: handlers/crear_pedido.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: POST
+          path: /pedidos/crear
+          authorizer:
+            name: MiAutorizadorBurger
+
+  ConsultarEstado:
+    handler: handlers/consultar_estado.handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: GET
+          path: /pedidos/estado/{pedido_id}
+          authorizer:
+            name: MiAutorizadorBurger
+
+resources:
+  Resources:
+    PedidosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${env:TABLA_PEDIDOS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pedido_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pedido_id
+            KeyType: HASH
