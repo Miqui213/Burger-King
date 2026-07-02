@@ -41,3 +41,21 @@ functions:
           path: /analitica/dashboard
           authorizer:
             name: MiAutorizadorBurger
+
+resources:
+  Resources:
+    TablaHistorialEstados:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${env:TABLA_HISTORIAL_ESTADOS}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: pedido_id
+            AttributeType: S
+          - AttributeName: estado_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: pedido_id
+            KeyType: HASH
+          - AttributeName: estado_id
+            KeyType: RANGE

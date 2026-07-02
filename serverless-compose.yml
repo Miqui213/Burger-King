@@ -23,7 +23,7 @@ services:
       - dependencias
 
   api-pedidos:
-    path: pedidos
+    path: pedido
     dependsOn:
       - dependencias
       - step-function
