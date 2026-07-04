@@ -112,6 +112,56 @@ menu = [
         "precio": "6.90",
         "categoria": "Postres",
         "img_url": "https://images.unsplash.com/photo-1624371414325-e2244f8fcc9c?w=500&q=80"
+    },
+    {
+        "nombre": "Mega STACKER",
+        "precio": "27.90",
+        "categoria": "Contundentes",
+        "img_url": "https://images.unsplash.com/photo-1594221708779-94832f4320d1?w=500&q=80"
+    },
+    {
+        "nombre": "Bacon King",
+        "precio": "30.90",
+        "categoria": "Contundentes",
+        "img_url": "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=500&q=80"
+    },
+    {
+        "nombre": "Parrillera XL",
+        "precio": "21.90",
+        "categoria": "Contundentes",
+        "img_url": "https://images.unsplash.com/photo-1605901309584-818e25960b8f?w=500&q=80"
+    },
+    {
+        "nombre": "Philly Cheese",
+        "precio": "27.90",
+        "categoria": "Contundentes",
+        "img_url": "https://images.unsplash.com/photo-1586816001966-79b736744398?w=500&q=80"
+    },
+
+    {
+        "nombre": "XT Clásica",
+        "precio": "22.90",
+        "categoria": "XT Premium",
+        "img_url": "https://images.unsplash.com/photo-1550547660-d9450f859349?w=500&q=80"
+    },
+    {
+        "nombre": "XT Steakhouse",
+        "precio": "27.90",
+        "categoria": "XT Premium",
+        "img_url": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80"
+    },
+
+    {
+        "nombre": "WHOPPER Vegetal",
+        "precio": "18.90",
+        "categoria": "Whopper Vegetal",
+        "img_url": "https://images.unsplash.com/photo-1520072959219-c595dc870360?w=500&q=80"
+    },
+    {
+        "nombre": "WHOPPER Vegetal con Queso",
+        "precio": "21.90",
+        "categoria": "Whopper Vegetal",
+        "img_url": "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=500&q=80"
     }
 ]
 
