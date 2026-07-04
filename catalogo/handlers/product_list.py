@@ -166,4 +166,12 @@ def lambda_handler(event, context):
     if include_total:
         resp.update({"totalElements": total, "totalPages": total_pages})
 
-    return _resp(200, resp)
+    return {
+            "statusCode": 200,
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+            },
+            "body": json.dumps(catalogo_extraido) # O la variable que estés usando para tu lista
+        }
