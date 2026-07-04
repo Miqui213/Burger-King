@@ -158,7 +158,7 @@ def lambda_handler(event, context):
     lek_out = rpage.get("LastEvaluatedKey")
     next_token_out = _encode_token(lek_out)
 
-    i# ... (código anterior)
+    # ... (código anterior)
     items = _convert_decimal(items)
 
     resp = {"contents": items, "size": size, "next_token": next_token_out}
