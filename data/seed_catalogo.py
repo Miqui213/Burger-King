@@ -2,6 +2,7 @@ import boto3
 import requests
 import uuid
 import os
+import time
 from decimal import Decimal
 
 REGION = 'us-east-1'
@@ -116,6 +117,10 @@ menu = [
 
 print("Iniciando extracción y carga del catálogo...")
 
+cabeceras_navegador = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+}
+
 for item in menu:
     producto_id = f"PROD-{str(uuid.uuid4())[:8].upper()}"
     nombre_archivo = f"{producto_id}.jpg"
@@ -123,9 +128,9 @@ for item in menu:
     print(f"Descargando imagen para: {item['nombre']}...")
     
     try:
-        respuesta_img = requests.get(item['img_url'], stream=True)
+        respuesta_img = requests.get(item['img_url'], stream=True, headers=cabeceras_navegador)
+        
         if respuesta_img.status_code == 200:
-            
             s3.upload_fileobj(
                 respuesta_img.raw, 
                 BUCKET_NAME, 
@@ -147,9 +152,11 @@ for item in menu:
             table.put_item(Item=producto_db)
             print(f"Éxito: {item['nombre']} inyectado (DynamoDB + S3)")
         else:
-            print(f"Error descargando imagen para {item['nombre']}")
+            print(f"Fallo de red. El servidor devolvió error HTTP: {respuesta_img.status_code}")
             
     except Exception as e:
-        print(f"Error general con {item['nombre']}: {str(e)}")
+        print(f"Error interno con {item['nombre']}: {str(e)}")
 
-print("🎉 ¡Catálogo cargado al 100%! Revisa tu bucket y tu tabla.")
+    time.sleep(1)
+
+print("¡Proceso finalizado!")
