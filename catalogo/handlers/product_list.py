@@ -158,6 +158,7 @@ def lambda_handler(event, context):
     lek_out = rpage.get("LastEvaluatedKey")
     next_token_out = _encode_token(lek_out)
 
+    i# ... (código anterior)
     items = _convert_decimal(items)
 
     resp = {"contents": items, "size": size, "next_token": next_token_out}
@@ -166,12 +167,5 @@ def lambda_handler(event, context):
     if include_total:
         resp.update({"totalElements": total, "totalPages": total_pages})
 
-    return {
-            "statusCode": 200,
-            "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "Content-Type",
-                "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
-            },
-            "body": json.dumps(catalogo_extraido) # O la variable que estés usando para tu lista
-        }
+    # ESTE ES EL ÚNICO RETURN QUE DEBE HABER AL FINAL
+    return _resp(200, resp)
