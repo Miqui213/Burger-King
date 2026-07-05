@@ -16,6 +16,8 @@ provider:
       MiAutorizadorBurger:
         type: request
         functionArn: arn:aws:lambda:${aws:region}:${aws:accountId}:function:burger-king-autenticacion-dev-ValidarTokenAcceso
+        payloadVersion: '2.0'
+        enableSimpleResponses: true
 
 functions:
   CompletarCocina:
