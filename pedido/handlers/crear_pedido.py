@@ -14,7 +14,7 @@ def handler(event, context):
         print(f"Evento httpApi recibido: {json.dumps(event)}")
         
         authorizer_context = event.get('requestContext', {}).get('authorizer', {})
-        usuario_id = authorizer_context.get('lambda', {}).get('usuario_id') or 'Usuario_Autenticado'
+        usuario_id = authorizer_context.get('lambda', {}).get('username') or 'Usuario_Autenticado'
         
         body_str = event.get('body', '{}')
         body = json.loads(body_str) if body_str else {}
