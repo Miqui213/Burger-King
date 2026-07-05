@@ -1,6 +1,14 @@
 import json
 import boto3
 import os
+from decimal import Decimal
+
+# Esta clase mágica le enseña a json.dumps cómo convertir Decimals a float
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ.get('TABLA_PEDIDOS'))
@@ -27,13 +35,11 @@ def handler(event, context):
                 "body": json.dumps({"error": f"El pedido con ID {pedido_id} no fue localizado"})
             }
             
-        if 'total' in item:
-            item['total'] = float(item['total'])
-            
         return {
             "statusCode": 200,
             "headers": {"Content-Type": "application/json"},
-            "body": json.dumps(item)
+            # Aquí inyectamos el Encoder mágico
+            "body": json.dumps(item, cls=DecimalEncoder)
         }
         
     except Exception as e:
