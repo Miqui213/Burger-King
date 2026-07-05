@@ -8,14 +8,15 @@ dynamodb = boto3.resource('dynamodb')
 TABLE_HISTORIAL_ESTADOS = os.environ['TABLE_HISTORIAL_ESTADOS']
 TABLE_PEDIDOS = os.environ.get('TABLE_PEDIDOS')
 
-def update_pedido_estado(pedido_id, local_id, nuevo_estado):
+# CORRECCIÓN 1: Eliminamos el local_id de la llave, igual que hicimos antes
+def update_pedido_estado(pedido_id, nuevo_estado):
     """Updates the estado field in the Pedidos table"""
     if not TABLE_PEDIDOS:
         return False
     try:
         table = dynamodb.Table(TABLE_PEDIDOS)
         table.update_item(
-            Key={'local_id': local_id, 'pedido_id': pedido_id},
+            Key={'pedido_id': pedido_id},
             UpdateExpression='SET estado = :estado',
             ExpressionAttributeValues={':estado': nuevo_estado}
         )
@@ -30,18 +31,19 @@ def handler(event, context):
     
     task_token = event.get('taskToken')
     input_data = event.get('input', {})
-    order_id = input_data.get('order_id')
+    
+    # CORRECCIÓN 2: Buscamos 'pedido_id' primero, por si acaso viene así
+    order_id = input_data.get('pedido_id') or input_data.get('order_id')
+    
+    if not order_id:
+        print("Error crítico: No llegó el ID del pedido")
+        return {"statusCode": 400, "error": "ID no encontrado"}
+        
     empleado_id = input_data.get('empleado_id', 'COCINA')
     
-    local_id = (
-        input_data.get('local_id') or
-        input_data.get('details', {}).get('local_id') or
-        'UNKNOWN'
-    )
-    
-    print(f"local_id: {local_id}, order_id: {order_id}")
+    print(f"Procesando order_id: {order_id}")
 
-    update_pedido_estado(order_id, local_id, 'en_preparacion')
+    update_pedido_estado(order_id, 'en_preparacion')
     
     table = dynamodb.Table(TABLE_HISTORIAL_ESTADOS)
     response = table.query(
