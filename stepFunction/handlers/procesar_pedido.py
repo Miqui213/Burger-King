@@ -61,7 +61,8 @@ def handler(event, context):
     table = dynamodb.Table(TABLE_HISTORIAL_ESTADOS)
     timestamp = datetime.utcnow().isoformat()
     
-    details_with_local = dict(input_data)
+    # Usamos json.loads con parse_float para convertir mágicamente todos los números anidados a Decimal
+    details_with_local = json.loads(json.dumps(input_data), parse_float=Decimal)
         
     # CORRECCIÓN 2: El total también debe salir de input_data
     total_raw = input_data.get('total') or input_data.get('detail', {}).get('total', 0)
