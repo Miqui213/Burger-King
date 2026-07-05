@@ -50,3 +50,14 @@ functions:
           path: /operaciones/delivery
           authorizer:
             name: MiAutorizadorBurger
+
+  ListarPedidos:
+    handler: handlers/listar_pedidos.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: GET
+          path: /operaciones/pedidos
+          authorizer:
+            name: MiAutorizadorBurger
