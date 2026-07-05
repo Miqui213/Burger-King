@@ -43,27 +43,29 @@ def handler(event, context):
     print(f"ProcesarPedido Event: {json.dumps(event)}")
     
     task_token = event.get('taskToken')
+    # Aquí es donde viene la información real del pedido
     input_data = event.get('input', {})
 
-    pedido_id = event.get('pedido_id') or event.get('detail', {}).get('pedido_id')
+    # CORRECCIÓN 1: Buscar en input_data en lugar de event
+    pedido_id = input_data.get('pedido_id') or input_data.get('detail', {}).get('pedido_id')
     
     if not pedido_id:
+        print("Error: pedido_id no encontrado en input_data")
         return {"statusCode": 400, "body": "Error: pedido_id no encontrado"}
         
     empleado_id = input_data.get('detail', {}).get('empleado_id') or input_data.get('empleado_id', 'SYSTEM')
-    local_id = input_data.get('local_id', 'UNKNOWN')
 
-    # Llamamos a la función corregida (sin local_id)
+    # Llamamos a nuestra función de base de datos ya corregida (sin local_id)
     update_pedido_estado(pedido_id, 'procesando', task_token)
     
     table = dynamodb.Table(TABLE_HISTORIAL_ESTADOS)
     timestamp = datetime.utcnow().isoformat()
     
     details_with_local = dict(input_data)
-    if 'local_id' not in details_with_local:
-        details_with_local['local_id'] = local_id
         
-    total_pedido = Decimal(str(event.get('total', 0)))
+    # CORRECCIÓN 2: El total también debe salir de input_data
+    total_raw = input_data.get('total') or input_data.get('detail', {}).get('total', 0)
+    total_pedido = Decimal(str(total_raw))
     
     item = {
         'pedido_id': pedido_id,
