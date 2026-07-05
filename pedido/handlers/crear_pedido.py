@@ -13,6 +13,7 @@ def handler(event, context):
     try:
         print(f"Evento httpApi recibido: {json.dumps(event)}")
         
+        # 1. Obtener usuario del autorizador
         authorizer_context = event.get('requestContext', {}).get('authorizer', {})
         usuario_id = authorizer_context.get('lambda', {}).get('username') or 'Usuario_Autenticado'
         
@@ -22,21 +23,35 @@ def handler(event, context):
         pedido_id = str(uuid.uuid4())[:8]
         timestamp = datetime.utcnow().isoformat()
         
+        # 2. Convertir los items para que DynamoDB los acepte (float -> Decimal)
+        items_dynamo = []
+        for item in body.get('items', []):
+            item_copy = item.copy()
+            if 'precio' in item_copy:
+                item_copy['precio'] = Decimal(str(item_copy['precio']))
+            items_dynamo.append(item_copy)
+            
         total_decimal = Decimal(str(body.get('total', 0)))
         
         nuevo_pedido = {
             "pedido_id": pedido_id,
-            "cliente": body.get('cliente', usuario_id),
-            "items": body.get('items', []),
+            "cliente": usuario_id,
+            "items": items_dynamo,
             "total": total_decimal,
             "estado": "RECIBIDO",
             "createdAt": timestamp
         }
         
+        # 3. Guardar en DynamoDB
         table.put_item(Item=nuevo_pedido)
         
+        # 4. Revertir Decimal a float para que json.dumps no explote al enviarlo a EventBridge
         nuevo_pedido['total'] = float(total_decimal)
+        for item in nuevo_pedido['items']:
+            if 'precio' in item:
+                item['precio'] = float(item['precio'])
         
+        # 5. Disparar el evento (que inicia tu Step Function)
         eventbridge.put_events(
             Entries=[{
                 'Source': 'burgerking.pedidos',
