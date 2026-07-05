@@ -9,19 +9,32 @@ dynamodb = boto3.resource('dynamodb')
 TABLE_HISTORIAL_ESTADOS = os.environ['TABLE_HISTORIAL_ESTADOS']
 TABLE_PEDIDOS = os.environ.get('TABLE_PEDIDOS')
 
-def update_pedido_estado(pedido_id, local_id, nuevo_estado):
-    """Actualiza el estado en la tabla de Pedidos (Transaccional)"""
+def update_pedido_estado(pedido_id, local_id, nuevo_estado, task_token=None):
+    """Actualiza el estado y guarda el token en la tabla de Pedidos (Transaccional)"""
     if not TABLE_PEDIDOS:
         print("Warning: TABLE_PEDIDOS no configurado")
         return False
     try:
         table = dynamodb.Table(TABLE_PEDIDOS)
-        table.update_item(
-            Key={'local_id': local_id, 'pedido_id': pedido_id},
-            UpdateExpression='SET estado = :estado',
-            ExpressionAttributeValues={':estado': nuevo_estado}
-        )
-        print(f"Pedido {pedido_id} actualizado a: {nuevo_estado}")
+        
+        # OJO AQUÍ: Revisa si tu tabla usa 'local_id' como clave secundaria.
+        # Si tu tabla de pedidos SOLO usa 'pedido_id', borra la parte de 'local_id' en la Key.
+        llave = {'local_id': local_id, 'pedido_id': pedido_id} 
+        
+        if task_token:
+            table.update_item(
+                Key=llave,
+                UpdateExpression='SET estado = :estado, taskToken = :token',
+                ExpressionAttributeValues={':estado': nuevo_estado, ':token': task_token}
+            )
+        else:
+            table.update_item(
+                Key=llave,
+                UpdateExpression='SET estado = :estado',
+                ExpressionAttributeValues={':estado': nuevo_estado}
+            )
+            
+        print(f"Pedido {pedido_id} actualizado a: {nuevo_estado} con Token: {bool(task_token)}")
         return True
     except Exception as e:
         print(f"Error actualizando estado: {e}")
@@ -41,7 +54,7 @@ def handler(event, context):
     empleado_id = input_data.get('detail', {}).get('empleado_id') or input_data.get('empleado_id', 'SYSTEM')
     local_id = input_data.get('local_id', 'UNKNOWN')
 
-    update_pedido_estado(pedido_id, local_id, 'procesando')
+    update_pedido_estado(pedido_id, local_id, 'procesando', task_token)
     
     table = dynamodb.Table(TABLE_HISTORIAL_ESTADOS)
     timestamp = datetime.utcnow().isoformat()
