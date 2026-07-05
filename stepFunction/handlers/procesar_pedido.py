@@ -7,7 +7,7 @@ from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb')
 TABLE_HISTORIAL_ESTADOS = os.environ['TABLE_HISTORIAL_ESTADOS']
-TABLE_PEDIDOS = os.environ.get('TABLE_PEDIDOS')
+TABLE_PEDIDOS = os.environ.get('TABLA_PEDIDOS') or os.environ.get('TABLE_PEDIDOS')
 
 def update_pedido_estado(pedido_id, nuevo_estado, task_token=None):
     """Actualiza el estado y guarda el token en la tabla de Pedidos"""
