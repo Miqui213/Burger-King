@@ -10,14 +10,15 @@ TABLE_HISTORIAL_ESTADOS = os.environ['TABLE_HISTORIAL_ESTADOS']
 TABLE_PEDIDOS = os.environ.get('TABLE_PEDIDOS')
 EVENT_BUS_NAME = os.environ.get('EVENT_BUS_NAME', 'default')
 
-def update_pedido_estado(pedido_id, local_id, nuevo_estado):
+# CORRECCIÓN 1: Eliminamos el local_id (Y aquí NO necesitamos task_token porque es el final del flujo)
+def update_pedido_estado(pedido_id, nuevo_estado):
     """Updates the estado field in the Pedidos table"""
     if not TABLE_PEDIDOS:
         return False
     try:
         table = dynamodb.Table(TABLE_PEDIDOS)
         table.update_item(
-            Key={'local_id': local_id, 'pedido_id': pedido_id},
+            Key={'pedido_id': pedido_id},
             UpdateExpression='SET estado = :estado',
             ExpressionAttributeValues={':estado': nuevo_estado}
         )
@@ -31,18 +32,19 @@ def handler(event, context):
     print(f"EntregaCompleta Event: {json.dumps(event)}")
     
     input_data = event.get('input', {})
-    order_id = input_data.get('order_id')
+    
+    # CORRECCIÓN 2: Atrapar el ID correctamente
+    order_id = input_data.get('pedido_id') or input_data.get('order_id')
     empleado_id = input_data.get('empleado_id', 'SYSTEM')
 
-    local_id = (
-        input_data.get('local_id') or
-        input_data.get('details', {}).get('local_id') or
-        'UNKNOWN'
-    )
+    if not order_id:
+        print("Error crítico: No llegó el ID del pedido")
+        return {"statusCode": 400, "error": "ID no encontrado"}
+        
+    print(f"Procesando order_id final: {order_id}")
     
-    print(f"local_id: {local_id}, order_id: {order_id}")
-    
-    update_pedido_estado(order_id, local_id, 'recibido')
+    # CORRECCIÓN 3: El estado final no debería ser 'recibido'. ¡Debe ser 'ENTREGADO'!
+    update_pedido_estado(order_id, 'ENTREGADO')
     
     table = dynamodb.Table(TABLE_HISTORIAL_ESTADOS)
     response = table.query(
@@ -63,7 +65,7 @@ def handler(event, context):
         'pedido_id': order_id,
         'estado_id': timestamp,
         'createdAt': timestamp,
-        'estado': 'recibido',
+        'estado': 'ENTREGADO', # Actualizado aquí también
         'hora_inicio': timestamp,
         'hora_fin': timestamp,
         'empleado': empleado_id,
@@ -71,6 +73,7 @@ def handler(event, context):
     }
     table.put_item(Item=item)
 
+    # Tu integración con EventBridge para enviar el correo está intacta y perfecta
     try:
         events.put_events(
             Entries=[{

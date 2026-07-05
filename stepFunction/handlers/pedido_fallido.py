@@ -10,14 +10,15 @@ TABLE_HISTORIAL_ESTADOS = os.environ['TABLE_HISTORIAL_ESTADOS']
 TABLE_PEDIDOS = os.environ.get('TABLE_PEDIDOS')
 EVENT_BUS_NAME = os.environ.get('EVENT_BUS_NAME', 'default')
 
-def update_pedido_estado(pedido_id, local_id, nuevo_estado):
+# CORRECCIÓN 1: Eliminamos el local_id (No necesitamos task_token aquí)
+def update_pedido_estado(pedido_id, nuevo_estado):
     """Updates the estado field in the Pedidos table"""
     if not TABLE_PEDIDOS:
         return False
     try:
         table = dynamodb.Table(TABLE_PEDIDOS)
         table.update_item(
-            Key={'local_id': local_id, 'pedido_id': pedido_id},
+            Key={'pedido_id': pedido_id},
             UpdateExpression='SET estado = :estado',
             ExpressionAttributeValues={':estado': nuevo_estado}
         )
@@ -31,19 +32,26 @@ def handler(event, context):
     print(f"PedidoFallido Event: {json.dumps(event)}")
     
     input_data = event.get('input', {})
-    order_id = input_data.get('order_id') or input_data.get('pedido_id')
-    error_info = input_data.get('error', {})
     
-    local_id = (
-        input_data.get('local_id') or
-        input_data.get('details', {}).get('local_id') or
-        'UNKNOWN'
+    # CORRECCIÓN 2: Búsqueda robusta del ID (Por cómo Step Functions anida los errores en el Catch)
+    order_id = (
+        input_data.get('pedido_id') or 
+        input_data.get('order_id') or 
+        input_data.get('input', {}).get('pedido_id') or
+        input_data.get('input', {}).get('order_id')
     )
     
-    print(f"local_id: {local_id}, order_id: {order_id}")
-    print(f"Error: {error_info}")
+    error_info = input_data.get('error', {})
     
-    update_pedido_estado(order_id, local_id, 'fallido')
+    if not order_id:
+        print("Error crítico: No llegó el ID del pedido al manejador de fallos")
+        return {"statusCode": 400, "error": "ID no encontrado"}
+        
+    print(f"Procesando fallo para order_id: {order_id}")
+    print(f"Error detectado: {error_info}")
+    
+    # CORRECCIÓN 3: Actualizamos el estado sin el local_id
+    update_pedido_estado(order_id, 'fallido')
     
     table = dynamodb.Table(TABLE_HISTORIAL_ESTADOS)
     response = table.query(
@@ -82,7 +90,6 @@ def handler(event, context):
                 'DetailType': 'PedidoFallido',
                 'Detail': json.dumps({
                     'order_id': order_id,
-                    'local_id': local_id,
                     'timestamp': timestamp,
                     'error': str(error_info),
                     'message': 'Tu pedido no pudo ser procesado. Por favor contacta con el restaurante.'
@@ -97,6 +104,5 @@ def handler(event, context):
     return {
         "status": "FAILED",
         "order_id": order_id,
-        "local_id": local_id,
         "message": "Pedido marcado como fallido y usuario notificado"
     }
