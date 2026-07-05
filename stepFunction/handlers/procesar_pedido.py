@@ -9,17 +9,16 @@ dynamodb = boto3.resource('dynamodb')
 TABLE_HISTORIAL_ESTADOS = os.environ['TABLE_HISTORIAL_ESTADOS']
 TABLE_PEDIDOS = os.environ.get('TABLE_PEDIDOS')
 
-def update_pedido_estado(pedido_id, local_id, nuevo_estado, task_token=None):
-    """Actualiza el estado y guarda el token en la tabla de Pedidos (Transaccional)"""
+def update_pedido_estado(pedido_id, nuevo_estado, task_token=None):
+    """Actualiza el estado y guarda el token en la tabla de Pedidos"""
     if not TABLE_PEDIDOS:
         print("Warning: TABLE_PEDIDOS no configurado")
         return False
     try:
         table = dynamodb.Table(TABLE_PEDIDOS)
         
-        # OJO AQUÍ: Revisa si tu tabla usa 'local_id' como clave secundaria.
-        # Si tu tabla de pedidos SOLO usa 'pedido_id', borra la parte de 'local_id' en la Key.
-        llave = {'local_id': local_id, 'pedido_id': pedido_id} 
+        # LA LLAVE CORREGIDA: Solo usamos pedido_id
+        llave = {'pedido_id': pedido_id} 
         
         if task_token:
             table.update_item(
@@ -34,12 +33,12 @@ def update_pedido_estado(pedido_id, local_id, nuevo_estado, task_token=None):
                 ExpressionAttributeValues={':estado': nuevo_estado}
             )
             
-        print(f"Pedido {pedido_id} actualizado a: {nuevo_estado} con Token: {bool(task_token)}")
+        print(f"Pedido {pedido_id} actualizado con Token: {bool(task_token)}")
         return True
     except Exception as e:
-        print(f"Error actualizando estado: {e}")
+        print(f"Error fatal actualizando estado en DynamoDB: {e}")
         return False
-
+    
 def handler(event, context):
     print(f"ProcesarPedido Event: {json.dumps(event)}")
     
@@ -54,7 +53,8 @@ def handler(event, context):
     empleado_id = input_data.get('detail', {}).get('empleado_id') or input_data.get('empleado_id', 'SYSTEM')
     local_id = input_data.get('local_id', 'UNKNOWN')
 
-    update_pedido_estado(pedido_id, local_id, 'procesando', task_token)
+    # Llamamos a la función corregida (sin local_id)
+    update_pedido_estado(pedido_id, 'procesando', task_token)
     
     table = dynamodb.Table(TABLE_HISTORIAL_ESTADOS)
     timestamp = datetime.utcnow().isoformat()

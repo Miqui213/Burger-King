@@ -3,6 +3,8 @@ import boto3
 import os
 
 dynamodb = boto3.resource('dynamodb')
+# 1. Agregamos el cliente de Step Functions
+stepfunctions = boto3.client('stepfunctions')
 table = dynamodb.Table(os.environ.get('TABLA_PEDIDOS'))
 
 def lambda_handler(event, context):
@@ -11,7 +13,8 @@ def lambda_handler(event, context):
     rol = lambda_data.get('rol', '').lower()
     usuario_id = lambda_data.get('usuario_id', 'Desconocido')
     
-    if rol not in ['rappi', 'admin']:
+    # Nota: Dejamos 'admin' para que no tengas problemas al probar desde tu Mesa de Control
+    if rol not in ['rappi', 'admin', 'delivery']:
         return {"statusCode": 403, "body": json.dumps({"error": "Solo personal de RAPPI puede despachar."})}
         
     body = json.loads(event.get('body', '{}'))
@@ -30,6 +33,25 @@ def lambda_handler(event, context):
     else:
         estado_final = "EN_CAMINO_DELIVERY_LOCAL"
         
+    # 2. Rescatamos el Token
+    task_token = pedido.get('taskToken')
+    
+    # 3. Despertamos a la máquina de estados
+    if task_token:
+        try:
+            stepfunctions.send_task_success(
+                taskToken=task_token,
+                # Le pasamos a la máquina cómo se fue el pedido
+                output=json.dumps({
+                    "status": "DELIVERY_INICIADO", 
+                    "pedido_id": pedido_id,
+                    "canal_logistico": estado_final
+                })
+            )
+        except Exception as e:
+            print(f"Error despertando a Step Functions: {e}")
+            
+    # 4. Actualizamos la base de datos
     table.update_item(
         Key={'pedido_id': pedido_id},
         UpdateExpression="set estado = :e, transportista = :t, logistica_canal = :lc",
