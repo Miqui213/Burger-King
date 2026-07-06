@@ -63,3 +63,14 @@ functions:
           path: /operaciones/pedidos
           authorizer:
             name: MiAutorizadorBurger
+  
+  ConfirmarDelivery:
+    handler: handlers/confirmar_delivery.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: POST
+          path: /operaciones/delivery/confirmar
+          authorizer:
+            name: MiAutorizadorBurger
