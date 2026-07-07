@@ -74,3 +74,26 @@ functions:
           path: /operaciones/delivery/confirmar
           authorizer:
             name: MiAutorizadorBurger
+
+  # --- NUEVOS ENDPOINTS PARA EL DOBLE CLIC ---
+  IniciarCocina:
+    handler: handlers/iniciar_cocina.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: POST
+          path: /operaciones/iniciar_cocina
+          authorizer:
+            name: MiAutorizadorBurger
+
+  IniciarEmpaque:
+    handler: handlers/iniciar_empaque.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: POST
+          path: /operaciones/iniciar_empaque
+          authorizer:
+            name: MiAutorizadorBurger
