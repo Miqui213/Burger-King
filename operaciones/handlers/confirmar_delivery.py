@@ -31,6 +31,7 @@ def lambda_handler(event, context):
 
         # 2. Armamos la 'Muñeca Rusa' (Payload) que espera tu Lambda entrega_completa.py
         sfn_output = {
+            "status": "ENTREGADO",  # <--- ¡ESTA ES LA LÍNEA MÁGICA QUE FALTABA!
             "input": {
                 "pedido_id": pedido_id,
                 "order_id": pedido_id,
