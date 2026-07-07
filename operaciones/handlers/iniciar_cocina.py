@@ -3,6 +3,7 @@ import os
 import boto3
 
 dynamodb = boto3.resource('dynamodb')
+sfn_client = boto3.client('stepfunctions')
 TABLA_PEDIDOS = os.environ.get('TABLA_PEDIDOS')
 
 def lambda_handler(event, context):
@@ -15,16 +16,24 @@ def lambda_handler(event, context):
 
         table = dynamodb.Table(TABLA_PEDIDOS)
         
-        # Actualizamos el estado directamente a "en_preparacion"
-        table.update_item(
-            Key={'pedido_id': pedido_id},
-            UpdateExpression="set estado = :e",
-            ExpressionAttributeValues={':e': 'en_preparacion'}
+        # 1. Buscamos el token dormido en la base de datos
+        response = table.get_item(Key={'pedido_id': pedido_id})
+        item = response.get('Item', {})
+        task_token = item.get('taskToken')
+
+        if not task_token:
+            return {"statusCode": 400, "body": json.dumps({"error": "No hay token activo para este pedido"})}
+
+        # 2. ¡DESPERTAMOS A LA STEP FUNCTION!
+        # Le devolvemos el token. Esto hará que salte de 'ProcesarPedido' a 'PedidoEnCocina'
+        sfn_client.send_task_success(
+            taskToken=task_token,
+            output=json.dumps({"mensaje": "El cocinero aceptó el pedido", "pedido_id": pedido_id})
         )
 
         return {
             "statusCode": 200,
-            "body": json.dumps({"message": "Producción iniciada exitosamente."})
+            "body": json.dumps({"message": "Parrilla iniciada, Step Function avanzando."})
         }
 
     except Exception as e:
