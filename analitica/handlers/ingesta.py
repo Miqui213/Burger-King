@@ -4,13 +4,20 @@ import os
 import csv
 import io
 from datetime import datetime
+from decimal import Decimal  # <-- NUEVO IMPORT NECESARIO
 
 dynamodb = boto3.resource('dynamodb')
 s3 = boto3.client('s3')
 
-# CAMBIO CLAVE: Apuntamos directamente a la tabla que tiene la data completa
 tabla_pedidos = dynamodb.Table('Burger-Pedidos-dev')
 bucket_ingesta = os.environ.get('BUCKET_INGESTA')
+
+# <-- NUEVA CLASE: Le enseña a Python a convertir Decimales de DynamoDB a texto JSON -->
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super(DecimalEncoder, self).default(obj)
 
 def lambda_handler(event, context):
     headers_cors = {
@@ -30,14 +37,12 @@ def lambda_handler(event, context):
         }
         
     try:
-        # Extraemos de la tabla principal
         respuesta = tabla_pedidos.scan()
         registros = respuesta.get('Items', [])
 
         csv_buffer = io.StringIO()
         escritor_csv = csv.writer(csv_buffer)
         
-        # Cabeceras exactas que espera Athena
         escritor_csv.writerow([
             'pedido_id', 'cliente', 'cocinero_id', 'createdAt', 
             'empaquetador_id', 'estado', 'items', 'origen_pedido', 
@@ -46,7 +51,9 @@ def lambda_handler(event, context):
         
         for reg in registros:
             items_raw = reg.get('items', [])
-            items_str = json.dumps(items_raw) if isinstance(items_raw, (list, dict)) else str(items_raw)
+            
+            # <-- APLICAMOS EL ENCODER AQUÍ (cls=DecimalEncoder) -->
+            items_str = json.dumps(items_raw, cls=DecimalEncoder) if isinstance(items_raw, (list, dict)) else str(items_raw)
 
             escritor_csv.writerow([
                 reg.get('pedido_id', 'N/A'),
@@ -56,14 +63,13 @@ def lambda_handler(event, context):
                 reg.get('empaquetador_id', 'Desconocido'),
                 reg.get('estado', 'DESCONOCIDO'),
                 items_str,
-                reg.get('origen_pedido', 'LOCAL'), # Extraerá RAPPI_APP o LOCAL
+                reg.get('origen_pedido', 'LOCAL'),
                 reg.get('taskToken', ''),
-                str(reg.get('total', 0.0))         # Extraerá el monto real
+                str(reg.get('total', 0.0))
             ])
             
         nombre_archivo = f"ingesta_pedidos_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
         
-        # Guardamos en S3
         s3.put_object(
             Bucket=bucket_ingesta,
             Key=f"datos_pedidos/{nombre_archivo}", 
