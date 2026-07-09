@@ -9,16 +9,25 @@ database = os.environ.get('ATHENA_DATABASE')
 salida_s3 = f"s3://{os.environ.get('BUCKET_INGESTA')}/athena-results/"
 
 def lambda_handler(event, context):
+    # 1. Definimos las cabeceras CORS para permitir la conexión desde el navegador
+    headers_cors = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization",
+        "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+    }
+
     auth_context = event.get('requestContext', {}).get('authorizer', {})
     rol = auth_context.get('lambda', {}).get('rol', '').lower()
     
     if rol != 'admin':
         return {
             "statusCode": 403, 
+            "headers": headers_cors,  # <-- Inyectamos CORS
             "body": json.dumps({"error": "Acceso restringido al panel analítico."})
         }
         
     try:
+        # 2. La consulta SQL con la segmentación por origen que armamos
         query = """
             SELECT 
                 estado, 
@@ -61,8 +70,13 @@ def lambda_handler(event, context):
             
         return {
             "statusCode": 200,
+            "headers": headers_cors, # <-- Inyectamos CORS en el éxito
             "body": json.dumps({"metricas": datos_dashboard})
         }
         
     except Exception as e:
-        return {"statusCode": 500, "body": json.dumps({"error": f"Fallo en Athena: {str(e)}"})}
+        return {
+            "statusCode": 500, 
+            "headers": headers_cors, # <-- Inyectamos CORS en el error
+            "body": json.dumps({"error": f"Fallo en Athena: {str(e)}"})
+        }
