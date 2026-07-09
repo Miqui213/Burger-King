@@ -9,12 +9,12 @@ import boto3
 from botocore.exceptions import ClientError
 
 CORS_HEADERS = {"Access-Control-Allow-Origin": "*"}
-PRODUCTS_TABLE = os.environ.get("TABLA_PRODUCTOS", "Burger-Productos-dev")
-IMAGES_BUCKET = os.environ.get("BUCKET_PRODUCTOS", "burger-king-productos-bucket")
+PRODUCTS_TABLE = "Burger-Productos-dev"
+IMAGES_BUCKET = "burger-king-catalogo-imagenes"
 
 dynamodb = boto3.resource("dynamodb")
 s3 = boto3.client("s3")
-region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
+region = "us-east-1"
 
 productos_table = dynamodb.Table(PRODUCTS_TABLE)
 
