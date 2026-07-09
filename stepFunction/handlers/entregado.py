@@ -41,9 +41,10 @@ def handler(event, context):
     task_token = event.get('taskToken')
     input_data = event.get('input', {})
     
-    # CORRECCIÓN 2: Atrapar el ID correctamente
-    order_id = input_data.get('pedido_id') or input_data.get('order_id')
-    empleado_id = input_data.get('empleado_id', 'DELIVERY')
+    # --- LA SOLUCIÓN AQUÍ ---
+    # Buscamos el ID en la primera capa, y si no está, lo buscamos dentro de la "Muñeca Rusa" ('input')
+    order_id = input_data.get('pedido_id') or input_data.get('order_id') or input_data.get('input', {}).get('pedido_id')
+    empleado_id = input_data.get('empleado_id') or input_data.get('input', {}).get('empleado_id', 'DELIVERY')
 
     if not order_id:
         print("Error crítico: No llegó el ID del pedido")
@@ -51,7 +52,7 @@ def handler(event, context):
         
     print(f"Procesando order_id: {order_id}")
     
-    # CORRECCIÓN 3: Pasar el token a la base de datos (y quitamos local_id)
+    # CORRECCIÓN 3: Pasar el token a la base de datos
     update_pedido_estado(order_id, 'entrega_delivery', task_token)
     
     table = dynamodb.Table(TABLE_HISTORIAL_ESTADOS)
