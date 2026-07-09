@@ -1,10 +1,12 @@
 import os
 import json
+import base64
 import boto3
 from decimal import Decimal
 from botocore.exceptions import ClientError
 
 PRODUCTS_TABLE = os.environ.get("TABLA_PRODUCTOS", "Burger-Productos-dev")
+IMAGES_BUCKET = os.environ.get("BUCKET_PRODUCTOS", "burger-king-productos-bucket")
 
 CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
@@ -14,6 +16,8 @@ CORS_HEADERS = {
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(PRODUCTS_TABLE)
+s3 = boto3.client("s3")
+region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
 
 def _resp(code, body):
     return {
@@ -33,7 +37,6 @@ def _parse_body(event):
     return body if isinstance(body, dict) else {}
 
 def _to_decimal(obj):
-    """Convierte int/float a Decimal para guardarlo en DynamoDB."""
     if isinstance(obj, dict):
         return {k: _to_decimal(v) for k, v in obj.items()}
     if isinstance(obj, list):
@@ -45,7 +48,6 @@ def _to_decimal(obj):
     return obj
 
 def _convert_decimal(obj):
-    """Convierte los Decimal de DynamoDB a float/int para la respuesta JSON."""
     if isinstance(obj, Decimal):
         return int(obj) if obj % 1 == 0 else float(obj)
     if isinstance(obj, dict):
@@ -53,6 +55,22 @@ def _convert_decimal(obj):
     if isinstance(obj, list):
         return [_convert_decimal(i) for i in obj]
     return obj
+
+def _strip_data_uri(b64s: str):
+    if "," in b64s and "base64" in b64s[:64].lower():
+        header, content = b64s.split(",", 1)
+        if ";base64" in header and ":" in header:
+            mime = header.split(":", 1)[1].split(";")[0].strip()
+            return content, mime
+    return b64s, None
+
+def _map_file_type(file_type: str) -> tuple[str, str]:
+    ft = (file_type or "").strip().lower()
+    if ft in ("png", "image/png"):
+        return "image/png", "png"
+    if ft in ("jpg", "jpeg", "image/jpg", "image/jpeg"):
+        return "image/jpeg", "jpg"
+    raise ValueError("file_type debe ser 'png' o 'jpg/jpeg'")
 
 def lambda_handler(event, context):
     print("UpdateProduct Event INVOKED")
@@ -84,6 +102,34 @@ def lambda_handler(event, context):
     
     key = {"local_id": str(local_id).strip(), "producto_id": str(producto_id).strip()}
 
+    # --- LÓGICA NUEVA: PROCESAR IMAGEN SI VIENE EN EL PAYLOAD ---
+    imagen_b64 = data.pop("imagen_b64", None)
+    file_type = data.pop("file_type", None)
+
+    if imagen_b64 and file_type:
+        try:
+            content_type, ext = _map_file_type(file_type)
+            b64_clean, _ = _strip_data_uri(imagen_b64)
+            image_bytes = base64.b64decode(b64_clean)
+            
+            # Reutilizamos el ID del producto para el nombre de la imagen
+            object_key = f"{key['local_id']}-{key['producto_id']}.{ext}"
+            
+            # Subimos a S3
+            s3.put_object(
+                Bucket=IMAGES_BUCKET,
+                Key=object_key,
+                Body=image_bytes,
+                ContentType=content_type,
+            )
+            
+            # Le inyectamos la nueva URL al diccionario de datos a actualizar
+            data["imagen_url"] = f"https://{IMAGES_BUCKET}.s3.{region}.amazonaws.com/{object_key}"
+            
+        except Exception as e:
+            return _resp(500, {"error": f"Error al subir imagen a S3: {str(e)}"})
+
+    # Quitamos los campos prohibidos (por si acaso el frontend los envió)
     for forbidden in ("local_id", "producto_id", "createdAt"):
         data.pop(forbidden, None)
 
