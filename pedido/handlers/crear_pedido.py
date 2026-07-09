@@ -39,7 +39,8 @@ def handler(event, context):
             "items": items_dynamo,
             "total": total_decimal,
             "estado": "RECIBIDO",
-            "createdAt": timestamp
+            "createdAt": timestamp,
+            "origen_pedido": body.get('origen_pedido', 'LOCAL')
         }
         
         # 3. Guardar en DynamoDB

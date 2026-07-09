@@ -19,7 +19,15 @@ def lambda_handler(event, context):
         }
         
     try:
-        query = "SELECT estado, COUNT(*) as cantidad, SUM(CAST(total AS DOUBLE)) as ingresos FROM pedidos_raw GROUP BY estado;"
+        query = """
+            SELECT 
+                estado, 
+                origen_pedido, 
+                COUNT(*) as cantidad, 
+                SUM(CAST(total AS DOUBLE)) as ingresos 
+            FROM pedidos_raw 
+            GROUP BY estado, origen_pedido;
+        """
         
         response_query = athena.start_query_execution(
             QueryString=query,
@@ -46,8 +54,9 @@ def lambda_handler(event, context):
             datos = fila['Data']
             datos_dashboard.append({
                 "estado": datos[0].get('VarCharValue', 'N/A'),
-                "cantidad": int(datos[1].get('VarCharValue', 0)),
-                "ingresos": float(datos[2].get('VarCharValue', 0.0))
+                "origen": datos[1].get('VarCharValue', 'DESCONOCIDO'),
+                "cantidad": int(datos[2].get('VarCharValue', 0)),
+                "ingresos": float(datos[3].get('VarCharValue', 0.0))
             })
             
         return {
