@@ -20,8 +20,8 @@ region = "us-east-1"
 productos_table = dynamodb.Table(PRODUCTS_TABLE)
 
 CATEGORIA_ENUM = [
-    "Combos", "Hamburguesas de Res", "Hamburguesas de Pollo",
-    "Papas y Snacks", "Bebidas", "Postres", "King Jr", "Promociones"
+    "XT Premium", "Whopper Vegetal", "Complementos", 
+    "Postres", "Contundentes", "Whopper", "Pollo"
 ]
 
 def _resp(code, payload=None):
