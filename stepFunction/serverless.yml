@@ -99,6 +99,17 @@ functions:
               - "PedidoEnCamino"
               - "EntregaDelivery"
               - "ConfirmarPedidoCliente"
+  
+  ConfirmarCliente:
+    handler: handlers/confirmar_cliente.lambda_handler
+    layers:
+      - !ImportValue BurgerKing-Python-Layer-Version
+    events:
+      - httpApi:
+          method: POST
+          path: /operaciones/cliente/confirmar
+          # OJO: Si la app del cliente no usa token (porque cualquiera puede ver su estado con el ID), 
+          # puedes quitar el authorizer aquí. Si los clientes inician sesión, déjalo.
 
   triggerEvent:
     handler: handlers/trigger_event.handler
