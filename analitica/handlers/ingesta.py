@@ -8,11 +8,11 @@ from datetime import datetime
 dynamodb = boto3.resource('dynamodb')
 s3 = boto3.client('s3')
 
-tabla_historial = dynamodb.Table(os.environ.get('TABLA_HISTORIAL_ESTADOS'))
+# CAMBIO CLAVE: Apuntamos directamente a la tabla que tiene la data completa
+tabla_pedidos = dynamodb.Table('Burger-Pedidos-dev')
 bucket_ingesta = os.environ.get('BUCKET_INGESTA')
 
 def lambda_handler(event, context):
-    # INYECCIÓN DE CORS
     headers_cors = {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type,Authorization",
@@ -20,24 +20,24 @@ def lambda_handler(event, context):
     }
 
     auth_context = event.get('requestContext', {}).get('authorizer', {})
-    lambda_data = auth_context.get('lambda', {})
-    rol = lambda_data.get('rol', '').lower()
+    rol = auth_context.get('lambda', {}).get('rol', '').lower()
     
     if rol != 'admin':
         return {
             "statusCode": 403, 
             "headers": headers_cors,
-            "body": json.dumps({"error": "Acceso denegado. Se requieren privilegios de Administrador para el Data Lake."})
+            "body": json.dumps({"error": "Acceso denegado."})
         }
         
     try:
-        respuesta = tabla_historial.scan()
+        # Extraemos de la tabla principal
+        respuesta = tabla_pedidos.scan()
         registros = respuesta.get('Items', [])
 
         csv_buffer = io.StringIO()
         escritor_csv = csv.writer(csv_buffer)
         
-        # 1. CABECERAS: Sincronizadas con la tabla de Athena y selected.csv
+        # Cabeceras exactas que espera Athena
         escritor_csv.writerow([
             'pedido_id', 'cliente', 'cocinero_id', 'createdAt', 
             'empaquetador_id', 'estado', 'items', 'origen_pedido', 
@@ -45,7 +45,6 @@ def lambda_handler(event, context):
         ])
         
         for reg in registros:
-            # Manejo seguro para convertir listas/diccionarios de items a JSON string
             items_raw = reg.get('items', [])
             items_str = json.dumps(items_raw) if isinstance(items_raw, (list, dict)) else str(items_raw)
 
@@ -57,14 +56,14 @@ def lambda_handler(event, context):
                 reg.get('empaquetador_id', 'Desconocido'),
                 reg.get('estado', 'DESCONOCIDO'),
                 items_str,
-                reg.get('origen_pedido', 'LOCAL'),  # Crucial para tu Dashboard
+                reg.get('origen_pedido', 'LOCAL'), # Extraerá RAPPI_APP o LOCAL
                 reg.get('taskToken', ''),
-                str(reg.get('total', 0.0))
+                str(reg.get('total', 0.0))         # Extraerá el monto real
             ])
             
         nombre_archivo = f"ingesta_pedidos_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
         
-        # 2. RUTA S3: Ajustada a la carpeta que lee Athena
+        # Guardamos en S3
         s3.put_object(
             Bucket=bucket_ingesta,
             Key=f"datos_pedidos/{nombre_archivo}", 
@@ -75,9 +74,8 @@ def lambda_handler(event, context):
             "statusCode": 200,
             "headers": headers_cors,
             "body": json.dumps({
-                "mensaje": "Pipeline de ingesta ejecutado con éxito",
-                "registros_procesados": len(registros),
-                "archivo_s3": nombre_archivo
+                "mensaje": "Ingesta completada",
+                "registros_procesados": len(registros)
             })
         }
         
@@ -85,5 +83,5 @@ def lambda_handler(event, context):
         return {
             "statusCode": 500, 
             "headers": headers_cors,
-            "body": json.dumps({"error": f"Fallo en la ingesta: {str(e)}"})
+            "body": json.dumps({"error": str(e)})
         }
